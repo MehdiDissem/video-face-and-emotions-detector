@@ -8,11 +8,12 @@ Promise.all([
 ]).then(startVideo);
 
 function startVideo() {
-  navigator.mediaDevices.getUserMedia({ video: true })
+  navigator.mediaDevices
+    .getUserMedia({ video: { width: 640, height: 480 } })
     .then((stream) => {
       video.srcObject = stream;
     })
-    .catch((err) => console.log("error log from video ", err));
+    .catch((err) => console.log("Error accessing video stream: ", err));
 }
 
 video.addEventListener("playing", () => {
@@ -20,7 +21,8 @@ video.addEventListener("playing", () => {
   document.body.append(canvas);
   const displaySize = { width: video.width, height: video.height };
   faceapi.matchDimensions(canvas, displaySize);
-  setInterval(async () => {
+
+  const detectObjects = async () => {
     const detections = await faceapi
       .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
       .withFaceLandmarks()
@@ -30,5 +32,13 @@ video.addEventListener("playing", () => {
     faceapi.draw.drawDetections(canvas, resizedDetections);
     faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
     faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
-  }, 100);
+
+    const objectDetection = cocoSsd.load().then((model) => {
+      model.detect(video).then((predictions) => {
+        predictions.map((e, i) => console.log(e.class));
+      });
+    });
+  };
+
+  setInterval(detectObjects, 1000);
 });
